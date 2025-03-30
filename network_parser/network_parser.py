@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import onnx
+from onnx import shape_inference
 
 project_root = Path(__file__).parents[1]
 sys.path.append(str(project_root))
@@ -23,6 +24,22 @@ def parse_pytorch(model: nn.Module, input_shape=(1, 3, 32, 32)) -> list[ShapePar
     layers = []
     #! <<<========= Implement here =========>>>
 
+    def hook_fn(module: nn.Module, inputs: tuple, output: torch.Tensor):
+        layers.append(ShapeParam(module.__class__.__name__, inputs[0].shape, output.shape))
+    
+    hooks = []
+    for module in model.modules():
+        if not isinstance(module, nn.Sequential) and not isinstance(module, nn.ModuleList):
+            hooks.append(module.register_forward_hook(hook_fn))
+    
+    # Perform a forward pass to trigger hooks
+    dummy_input = torch.randn(*input_shape)
+    model(dummy_input)
+    
+    # Remove hooks to avoid memory leaks
+    for hook in hooks:
+        hook.remove()
+    
     return layers
 
 
@@ -30,6 +47,30 @@ def parse_onnx(model: onnx.ModelProto) -> list[ShapeParam]:
     layers = []
     #! <<<========= Implement here =========>>>
 
+    inferred_model = shape_inference.infer_shapes(model)
+    
+    def get_tensor_shape(tensor_name: str):
+        for value_info in inferred_model.graph.value_info:
+            if value_info.name == tensor_name:
+                return tuple(dim.dim_value for dim in value_info.type.tensor_type.shape.dim)
+        
+        for input_info in inferred_model.graph.input:
+            if input_info.name == tensor_name:
+                return tuple(dim.dim_value for dim in input_info.type.tensor_type.shape.dim)
+        
+        for output_info in inferred_model.graph.output:
+            if output_info.name == tensor_name:
+                return tuple(dim.dim_value for dim in output_info.type.tensor_type.shape.dim)
+        
+        return None
+    
+    for node in inferred_model.graph.node:
+        input_shape = get_tensor_shape(node.input[0]) if node.input else None
+        output_shape = get_tensor_shape(node.output[0]) if node.output else None
+        
+        if input_shape and output_shape:
+            layers.append(ShapeParam(node.op_type, input_shape, output_shape))
+    
     return layers
 
 
