@@ -143,6 +143,17 @@ class EyerissAnalyzer:
     def glb_usage_per_pass(self) -> dict[str, int]:
         sizes: dict[str, int] = {}
         #! <<<========= Implement here =========>>>
+        ifmap = self.mapping.n * self.mapping.q * self.mapping.r * (self.conv_shape.U * (self.mapping.e - 1 ) + self.conv_shape.R) * self.conv_shape.W
+        filter = self.mapping.p * self.mapping.t * self.mapping.q * self.mapping.r * self.conv_shape.R * self.conv_shape.S
+        bias = self.mapping.p * self.mapping.t * 4
+        psum = self.mapping.p * self.mapping.t * self.mapping.e * self.conv_shape.F * 4
+        sizes = {
+            "ifmap": ifmap,
+            "filter": filter,
+            "psum": psum,
+            "bias": bias,
+            "total": ifmap + filter + psum + bias,
+        }
         return sizes
 
     
@@ -155,6 +166,23 @@ class EyerissAnalyzer:
     def dram_access_per_layer(self) -> dict[str, int]:
         res: dict[str, int] = {}
         #! <<<========= Implement here =========>>>
+        ifmap = self.mapping.n * self.mapping.q * self.mapping.r * (self.conv_shape.U * (self.mapping.e - 1 ) + self.conv_shape.R) * self.conv_shape.W
+        filter = self.mapping.p * self.mapping.t * self.mapping.q * self.mapping.r * self.conv_shape.R * self.conv_shape.S
+        bias = self.mapping.p * self.mapping.t * 4
+
+        ifmap_read = (self.conv_shape.M / self.mapping.m) * (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.C / (self.mapping.q * self.mapping.r)) * ifmap
+        filter_read = (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.M / (self.mapping.p * self.mapping.t)) * (self.conv_shape.C / (self.mapping.q * self.mapping.r)) * filter
+        bias_read = (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.M / (self.mapping.p * self.mapping.t)) * bias
+        ofmap_write = self.conv_shape.E * self.conv_shape.F * self.conv_shape.M * self.conv_shape.N
+        res  = {
+            "ifmap_read": ifmap_read,
+            "filter_read": filter_read,
+            "bias_read": bias_read,
+            "ofmap_write": ofmap_write,
+            "read": ifmap_read + filter_read + bias_read,
+            "write": ofmap_write,
+            "total": ifmap_read + filter_read + bias_read + ofmap_write,
+        }
         return res
 
     # GLB Accesses (GLB-Spad data movement)
@@ -162,6 +190,27 @@ class EyerissAnalyzer:
     def glb_access_per_layer(self) -> dict[str, int]:
         res: dict[str, int] = {}
         #! <<<========= Implement here =========>>>
+        ifmap = self.mapping.n * self.mapping.q * self.mapping.r * (self.conv_shape.U * (self.mapping.e - 1 ) + self.conv_shape.R) * self.conv_shape.W
+        filter = self.mapping.p * self.mapping.t * self.mapping.q * self.mapping.r * self.conv_shape.R * self.conv_shape.S
+        bias = self.mapping.p * self.mapping.t * 4
+        psum = self.mapping.p * self.mapping.t * self.mapping.e * self.conv_shape.F * 4
+
+        ifmap_read = (self.conv_shape.M / self.mapping.m) * (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.C / (self.mapping.q * self.mapping.r)) * (self.mapping.m / (self.mapping.p * self.mapping.t)) * ifmap
+        filter_read = (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.M / (self.mapping.p * self.mapping.t)) * (self.conv_shape.C / (self.mapping.q * self.mapping.r)) * (self.mapping.m / (self.mapping.p * self.mapping.t)) * filter
+        bias_read = (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.M / (self.mapping.p * self.mapping.t)) * bias
+        psum_read = (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.M / (self.mapping.p * self.mapping.t)) * ((self.conv_shape.C / (self.mapping.q * self.mapping.r)) - 1) * self.mapping.n * psum
+        psum_write = (self.conv_shape.E / self.mapping.e) * (self.conv_shape.N / self.mapping.n) * (self.conv_shape.M / (self.mapping.p * self.mapping.t)) * (self.conv_shape.C / (self.mapping.q * self.mapping.r)) * self.mapping.n * psum
+        
+        res = {
+            "ifmap_read": ifmap_read,
+            "filter_read": filter_read,
+            "bias_read": bias_read,
+            "psum_read": psum_read,
+            "psum_write": psum_write,
+            "read": ifmap_read + filter_read + bias_read + psum_read,
+            "write": psum_write,
+            "total": ifmap_read + filter_read + bias_read + psum_read + psum_write,
+        }
         return res
 
     
