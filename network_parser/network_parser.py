@@ -112,7 +112,7 @@ def run_tests() -> None:
     ]
 
     # Test with the PyTorch model.
-    model = VGG()
+    model = VGG_custom()
     layers_pth = parse_pytorch(model)
 
     # Define the input shape.
