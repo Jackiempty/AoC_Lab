@@ -16,7 +16,7 @@ from layer_info import (
     MaxPool2DShapeParam,
 )
 
-from lib.models.vgg import VGG
+from lib.models import VGG_custom
 import torch2onnx
 
 
@@ -24,21 +24,13 @@ def parse_pytorch(model: nn.Module, input_shape=(1, 3, 32, 32)) -> list[ShapePar
     layers = []
     #! <<<========= Implement here =========>>>
 
-    def hook_fn(module: nn.Module, inputs: tuple, output: torch.Tensor):
-        layers.append(ShapeParam(module.__class__.__name__, inputs[0].shape, output.shape))
+    def hook_fn():
+        layers.append(ShapeParam())
     
     hooks = []
     for module in model.modules():
         if not isinstance(module, nn.Sequential) and not isinstance(module, nn.ModuleList):
             hooks.append(module.register_forward_hook(hook_fn))
-    
-    # Perform a forward pass to trigger hooks
-    dummy_input = torch.randn(*input_shape)
-    model(dummy_input)
-    
-    # Remove hooks to avoid memory leaks
-    for hook in hooks:
-        hook.remove()
     
     return layers
 

@@ -46,6 +46,16 @@ class EyerissMapper:
     def evaluate(self, metrics: AnalysisResult) -> float:
         score = 0
         #! <<<========= Implement here =========>>>
+        peak_macs = self.analyzer.hardware.pe_array_h * self.analyzer.hardware.pe_array_w * 200 * 1e6
+        mac_utilization = self.analyzer.macs_per_layer / peak_macs  
+
+        mac_utilization = max(0, min(mac_utilization, 1))
+        score = (
+            self.analyzer.latency_per_layer * 0.5  
+            - 0.8 * mac_utilization * self.analyzer.latency_per_layer
+            + 0.1 * self.analyzer.dram_access_per_layer
+            + 0.1 * self.analyzer.glb_access_per_layer
+        )
         return score
 
     @property
@@ -119,19 +129,38 @@ class EyerissMapper:
     def generate_mappings(self, verbose: bool = False) -> list[EyerissMappingParam]:
         candidate_solutions = []
         #! <<<========= Implement here =========>>>
+        n_avaliable_list = [1]
+        p_available_list = self.p_avaliable()
+        q_available_list = self.q_avaliable()
+        e_available_list = self.e_available()
+        r_available_list = self.r_available()
+        t_available_list = self.t_available()
+        m_available_list = self.m_available()
+
+        candidate_solutions = product(
+            m_available_list,
+            n_avaliable_list,
+            e_available_list,
+            p_available_list,
+            q_available_list,
+            r_available_list,
+            t_available_list,
+        )
+        candidate_solutions = [EyerissMappingParam(*m) for m in candidate_solutions]
 
         return candidate_solutions
 
     def generate_hardware(self) -> list[EyerissHardwareParam]:
         candidate_solutions = []
-        pe_array_h_list = [6]  # add more values to explore more solutions
-        pe_array_w_list = [8]  # add more values to explore more solutions
-        ifmap_spad_size_list = [12]
-        filter_spad_size_list = [48]
-        psum_spad_size_list = [16]
-        glb_size_list = [64 * 2**10]
-        bus_bw_list = [4]
-        noc_bw_list = [4]
+        # Expanding search space to explore different hardware configurations
+        pe_array_h_list = [6, 8, 10]
+        pe_array_w_list = [8, 12, 16]
+        ifmap_spad_size_list = [12, 24, 32]
+        filter_spad_size_list = [48, 96, 128]
+        psum_spad_size_list = [16, 32, 64]
+        glb_size_list = [64 * 2**10, 128 * 2**10, 256 * 2**10]
+        bus_bw_list = [4, 8, 16]
+        noc_bw_list = [4, 8, 16]
         #! <<<========= Implement here =========>>>
         candidate_solutions = product(
             pe_array_h_list,
