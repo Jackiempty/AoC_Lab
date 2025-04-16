@@ -17,4 +17,12 @@ module PE (
     output logic ipsum_ready,
     output logic opsum_valid
 );
+always_comb begin
+    opsum = 32'd0;
+    ifmap_ready = 1'd0;
+    filter_ready = 1'd0;
+    ipsum_ready = 1'd0;
+    opsum_valid = 1'd0;
+end
+
 endmodule
