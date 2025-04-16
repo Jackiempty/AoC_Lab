@@ -14,4 +14,35 @@ module PPU (
     input relu_en,
     output logic[7:0] data_out
 );
+
+logic[7:0] output_1;
+logic[7:0] output_2;
+logic[7:0] output_3;
+
+post_quant post (
+    .clk(clk),
+    .rst(rst),
+    .data_in(data_in),
+    .scaling_factor(scaling_factor),
+    .data_out(output_1)
+);
+
+Comparator_Qint8 comp (
+    .clk(clk),
+    .rst(rst),
+    .data_in(data_in),
+    .data_out(output_2)
+);
+
+ReLU_Qint8 relu (
+    .clk(clk),
+    .rst(rst),
+    .data_in(data_in),
+    .data_out(output_3)
+);
+ 
+always_comb begin
+    data_out = 8'd0;
+end 
+
 endmodule
