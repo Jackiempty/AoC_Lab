@@ -1,13 +1,15 @@
 `include "define.svh"
 
 module ReLU_Qint8 (
-    input clk,
-    input rst,
-    input [`DATA_BITS-1:0] data_in,
-    output logic[7:0] data_out
+    input  logic        relu_en,     // ReLU enable
+    input  logic signed [31:0] data_in,
+    output logic signed [31:0] data_out
 );
 
 always_comb begin
-    data_out = 8'd0;
+    if (relu_en && data_in < 0)
+        data_out = 32'sd0;
+    else
+        data_out = data_in;
 end
 endmodule
