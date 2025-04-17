@@ -123,4 +123,4 @@ dist:
 
 maintainer-copy::
 clean mostlyclean distclean maintainer-clean::
-	-rm -rf obj_dir logs *.log *.dmp *.vpd wave/*.vcd wave/*.fsdb coverage.dat core *.zip release
+	-@rm -rf obj_dir logs *.log *.dmp *.vpd wave/*.vcd wave/*.fsdb coverage.dat core *.zip release nWaveLog vfastLog novas.conf novas.rc
