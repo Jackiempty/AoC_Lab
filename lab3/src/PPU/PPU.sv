@@ -42,7 +42,7 @@ Comparator_Qint8 comp (
     .data_out    (output_3)
 );
  
-always @(posedge clk)
+always @(*)
 begin
     case(relu_sel)
     1'b0: // post quant
@@ -54,6 +54,6 @@ begin
         data_out = output_3;
     end
     endcase
-end 
+end
 
 endmodule
