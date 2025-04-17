@@ -51,7 +51,7 @@ begin
     end
     1'b1: // max_pool
     begin
-        data_out = output_3;
+        data_out = output_2;
     end
     endcase
 end 

@@ -24,7 +24,7 @@ always_ff @(posedge clk or posedge rst) begin
         count <= count + 1;
 
         if (count == 2'd3)
-            count <= 2'd0; // 下一輪
+            count <= 2'd0;
     end
 end
 
