@@ -37,7 +37,8 @@ end
 typedef enum logic [1:0] {
     IDLE,
     COMPUTE,
-    WAIT_OUT
+    WAIT_OUT,
+    DEFAULT
 } state_t;
 
 state_t state, next_state;
@@ -54,7 +55,7 @@ logic signed [31:0] accum;
 
 // --- Zero-point subtraction ---
 always_comb begin
-    ifmap_s  = $signed(ifmap[7:0]) - 8'sd128;
+    ifmap_s  = $signed(ifmap[7:0]) + 8'sd128;
     filter_s = $signed(filter);
     ipsum_s  = $signed(ipsum);
 end
@@ -85,6 +86,8 @@ always_comb begin
         WAIT_OUT: begin
             if (opsum_ready) next_state = IDLE;
         end
+        DEFAULT: begin
+        end
     endcase
 end
 
@@ -114,14 +117,19 @@ always_ff @(posedge clk or posedge rst) begin
                 if (opsum_ready)
                     opsum_valid <= 0;
             end
+             DEFAULT: begin
+            end
         endcase
     end
 end
 
 // --- Output assignments ---
-assign opsum        = accum;
-assign ifmap_ready  = (state == COMPUTE);
-assign filter_ready = (state == COMPUTE);
-assign ipsum_ready  = (state == COMPUTE);
+always_comb begin
+opsum        = accum;
+ifmap_ready  = (state == COMPUTE);
+filter_ready = (state == COMPUTE);
+ipsum_ready  = (state == COMPUTE);
+end
+
 
 endmodule
