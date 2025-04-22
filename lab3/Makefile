@@ -30,7 +30,7 @@ VERILATOR_FLAGS += --trace
 VERILATOR_FLAGS += --trace-max-array 1024
 
 # Run Verilator in debug mode
-# VERILATOR_FLAGS += --debug
+VERILATOR_FLAGS += --debug
 
 LOG_FILE ?= logs/terminal_text.log
 POST_PROCESS :=
@@ -123,4 +123,4 @@ dist:
 
 maintainer-copy::
 clean mostlyclean distclean maintainer-clean::
-	-@rm -rf obj_dir logs *.log *.dmp *.vpd wave/*.vcd wave/*.fsdb coverage.dat core *.zip release nWaveLog vfastLog novas.conf novas.rc
+	-rm -rf obj_dir logs *.log *.dmp *.vpd wave/*.vcd wave/*.fsdb coverage.dat core *.zip release
