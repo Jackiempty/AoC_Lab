@@ -93,19 +93,43 @@ bool HardwareAbstractionLayer::memory_set(uint32_t addr, uint32_t data) {
 
     // send write address
     /*! <<<========= Implement here =========>>>*/
-
+    device->AWID_S = 0;
+    device->AWADDR_S = addr;
+    device->AWLEN_S = 0;    // unused
+    device->AWSIZE_S = 0;   // unused
+    device->AWBURST_S = 0;  // unused
+    device->AWVALID_S = 1;  // valid
+    device->eval();
     // wait for ready (address)
     /*! <<<========= Implement here =========>>>*/
-
+    while (!device->AWREADY_S) {
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    }
+    clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    device->AWVALID_S = 0;
     // send write data
     /*! <<<========= Implement here =========>>>*/
-
+    device->WDATA_S = data;
+    device->WSTRB_S = 0;   // unused
+    device->WLAST_S = 1;   // single shot, always the last one
+    device->WVALID_S = 1;  // valid
+    device->eval();
     // wait for ready (data)
     /*! <<<========= Implement here =========>>>*/
-
+    while (!device->WREADY_S) {
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    }
+    clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    device->WVALID_S = 0;
     // wait for write response
     /*! <<<========= Implement here =========>>>*/
-
+    device->BREADY_S = 1;
+    device->eval();
+    while (!device->BVALID_S) {
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    }
+    clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    device->BREADY_S = 0;
     int resp = device->BRESP_S;
     clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
     return resp == AXI_RESP_OKAY;
@@ -132,13 +156,25 @@ bool HardwareAbstractionLayer::memory_get(uint32_t addr, uint32_t &data) {
 
     // send read address
     /*! <<<========= Implement here =========>>>*/
-
+    device->ARID_S = 0;
+    device->ARADDR_S = addr;
+    device->ARLEN_S = 0;    // unused
+    device->ARSIZE_S = 0;   // unused
+    device->ARBURST_S = 0;  // unused
+    device->ARVALID_S = 1;  // valid
     // wait for ready (address)
     /*! <<<========= Implement here =========>>>*/
-
+    do {
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    } while (!device->ARREADY_S);
+    device->ARVALID_S = 0;
     // wait for valid (data)
     /*! <<<========= Implement here =========>>>*/
-
+    device->RREADY_S = 1;
+    do {
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    } while (!device->RVALID_S);
+    device->RREADY_S = 0;
     // get read data
     data = device->RDATA_S;
     int resp = device->RRESP_S;
@@ -194,7 +230,29 @@ void HardwareAbstractionLayer::handle_dma_read() {
 
     // send read data (increase mode, burst_size 32bits)
     /*! <<<========= Implement here =========>>>*/
+    device->RID_M = 0;  // default
+    device->RRESP_M = AXI_RESP_OKAY;
 
+    for (int i = 0; i <= len; i++) {
+        device->RDATA_M = *(addr + i);           // send read data
+        info.elapsed_cycle += MEM_ACCESS_CYCLE;  // simulate memory access delay
+        info.elapsed_time += MEM_ACCESS_CYCLE * CYCLE_TIME;
+#ifdef DEBUG
+        fprintf(stdout, "[HAL handle_dma_read] addr = %p, data = %08x \n",
+                addr + i, *(addr + i));
+#endif
+        device->RLAST_M = i == len;  // the last one
+        device->RVALID_M = 1;
+        device->eval();
+        // wait DMA ready for next data
+        while (!device->RREADY_M) {
+            clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+        }
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+        device->RVALID_M = 0;
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    }
+    device->eval();
     // count memory access
     info.memory_read += sizeof(uint32_t) * (len + 1);
 }
@@ -219,10 +277,40 @@ void HardwareAbstractionLayer::handle_dma_write() {
 
     // recv write data (increase mode, burst_size 32bits)
     /*! <<<========= Implement here =========>>>*/
+    device->RID_M = 0;  // default
 
+    for (int i = 0; i <= len; i++) {
+        *(addr + i) = (uint32_t)device->WDATA_M;  // recv write data
+        info.elapsed_cycle += MEM_ACCESS_CYCLE;  // simulate memory access delay
+        info.elapsed_time += MEM_ACCESS_CYCLE * CYCLE_TIME;
+
+#ifdef DEBUG
+        fprintf(stdout, "[HAL handle_dma_write] addr = %p, data = %08x \n",
+                addr + i, *(addr + i));
+#endif
+        device->WREADY_M = 1;
+        device->eval();
+        // wait DMA valid for next data
+        while (!device->WVALID_M) {
+            clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+        }
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+        device->WREADY_M = 0;
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    }
+    device->eval();
     // recv write response
     /*! <<<========= Implement here =========>>>*/
-
+    device->BID_M = 0;
+    device->BRESP_M = AXI_RESP_OKAY;
+    device->BVALID_M = 1;
+    device->eval();
+    while (!device->BREADY_M) {
+        clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    };
+    clock_step(device, ACLK, info.elapsed_cycle, info.elapsed_time);
+    device->BVALID_M = 0;
+    device->eval();
     // count memory access
     info.memory_write += sizeof(uint32_t) * (len + 1);
 }

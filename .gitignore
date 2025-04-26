@@ -66,3 +66,4 @@ logs/
 obj_dir/
 nWaveLog/
 wave/
+*.log
