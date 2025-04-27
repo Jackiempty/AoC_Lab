@@ -78,9 +78,36 @@ int qconv2d_relu_maxpool(
     dla_reset_runtime_info();
 #endif
     /*! <<<========= Implement here =========>>>*/
-
+    const int GLB_SIZE = 64 * 1024;
+    int ifmap_glb_size = q * r * W * (U * (e - 1) + R);
+    int filter_glb_size = p * t * q * r * R * S;
+    int usable_space = GLB_SIZE - ifmap_glb_size - filter_glb_size;
+    int unit_per_m = e * W * 4 + 4; // opsum + bias
+    uint32_t op_m = 1U << static_cast<int>(floor(log2(usable_space / unit_per_m)));
+    if (op_m > M) op_m = M;
+    int bias_glb_size = op_m * 4;
+    //------------------------------------------------
+    uint32_t ifmap_size = (q*r)*(U*(e-1)+R)*W;
+    uint32_t filter_size = (p*t)*(q*r)*R*S;
+    uint32_t real_m = (64*1024 - ifmap_size - filter_size)/(4*(1+e*((W+2*PAD-S)/U)));
+    uint32_t insert_m = (1U << (int)floor(log2(real_m)) < M)?1U << (int)floor(log2(real_m)):M;
+    // printf("real_m: %d, m: %d\n", real_m, op_m);
+    uint32_t bias_size = insert_m*4;
+    set_mapping_param(op_m, e, p, q, r, t);
+    set_shape_param1(PAD, U, R, S, C, M);
+    set_shape_param2(W, H, PAD);
     // call lower setting functions
     /*! <<<========= Implement here =========>>>*/
+    set_ifmap_addr(input_in_DRAM);
+    set_filter_addr(filter_in_DRAM);
+    set_bias_addr(bias);
+    set_opsum_addr(opsum_in_DRAM);
+    set_glb_filter_addr(ifmap_size);
+    set_glb_bias_addr(ifmap_size + filter_size);
+    set_glb_ofmap_addr(ifmap_size + filter_size + bias_size);
+    set_input_activation_len(ifmap_len);
+    set_output_activation_len(ofmap_len);
+    set_enable(scale, true, true, 1);
 
     wait_for_interrupt();
     dla_stop();
@@ -105,10 +132,28 @@ int qconv2d_relu(uint8_t *input_in_DRAM, int8_t *filter_in_DRAM,
 #ifdef DLA_INFO
     dla_reset_runtime_info();
 #endif
-    /*! <<<========= Implement here =========>>>*/
-
+    /*! <<<========= Implement here =========>>>*/              
+    uint32_t ifmap_size = (q*r)*(U*(e-1)+R)*W;
+    uint32_t filter_size = (p*t)*(q*r)*R*S;
+    uint32_t real_m = (64*1024 - ifmap_size - filter_size)/(4*(1+e*((W+2*PAD-S)/U)));
+    uint32_t insert_m = (1U << (int)floor(log2(real_m)) < M)?1U << (int)floor(log2(real_m)):M;
+    // printf("real_m: %d, m: %d\n", real_m, insert_m);
+    uint32_t bias_size = insert_m*4;
+    set_mapping_param(insert_m, e, p, q, r, t);
+    set_shape_param1(PAD, U, R, S, C, M);
+    set_shape_param2(W, H, PAD);
     // call lower setting functions
     /*! <<<========= Implement here =========>>>*/
+    set_ifmap_addr(input_in_DRAM);
+    set_filter_addr(filter_in_DRAM);
+    set_bias_addr(bias);
+    set_opsum_addr(opsum_in_DRAM);
+    set_glb_filter_addr(ifmap_size);
+    set_glb_bias_addr(ifmap_size + filter_size);
+    set_glb_ofmap_addr(ifmap_size + filter_size + bias_size);
+    set_input_activation_len(ifmap_len);
+    set_output_activation_len(ofmap_len);
+    set_enable(scale, false, true, 0);
 
     wait_for_interrupt();
     dla_stop();

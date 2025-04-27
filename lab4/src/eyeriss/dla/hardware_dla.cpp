@@ -13,6 +13,19 @@
 
 #include "hal.hpp"
 
+// #include <iomanip>
+// #include <iostream>
+// #include <sstream>
+// #include <stdexcept>
+// #include <string>
+// using namespace std;
+
+// static inline string int_to_hex(int i, int space) {
+//     stringstream stream;
+//     stream << setfill('0') << setw(space) << hex << uppercase << i;
+//     return stream.str().substr(stream.str().length() - space);
+//   }
+
 /// @brief Global HAL instance for DLA interaction.
 static HardwareAbstractionLayer hal(DLA_MMIO_BASE_ADDR,
                                     DLA_MMIO_SIZE);  // eyeriss device included
@@ -34,6 +47,13 @@ void set_enable(uint32_t scale_factor, bool maxpool, bool relu,
                 bool operation) {
     uint32_t value;
     /*! <<<========= Implement here =========>>>*/
+    value = 0;
+    value |= (0b1); // enable
+    value |= ((maxpool & 0b1) << 1); // maxpool
+    value |= ((relu & 0b1) << 2); // relu
+    value |= ((operation & 0b1) << 3); // operation
+    value |= ((scale_factor & 0b111111) << 4); // scale_factor
+    // cout << "config_value: " << int_to_hex(value, 3);
     reg_write(DLA_ENABLE_OFFSET, value);
 }
 
@@ -41,6 +61,13 @@ void set_mapping_param(uint32_t m, uint32_t e, uint32_t p, uint32_t q,
                        uint32_t r, uint32_t t) {
     uint32_t value;
     /*! <<<========= Implement here =========>>>*/
+    value = 0;
+    value |= (t & 0b111);
+    value |= ((r & 0b111) << 3);
+    value |= ((q & 0b111) << 6);
+    value |= ((p & 0b111) << 9);
+    value |= ((e & 0b1111) << 12);
+    value |= ((m & 0b1111111111) << 16);
     reg_write(DLA_MAPPING_PARAM_OFFSET, value);
 }
 
@@ -48,12 +75,22 @@ void set_shape_param1(uint32_t PAD, uint32_t U, uint32_t R, uint32_t S,
                       uint32_t C, uint32_t M) {
     uint32_t value;
     /*! <<<========= Implement here =========>>>*/
+    value = 0;
+    value |= (M & 0b111111111);
+    value |= ((C & 0b111111111) << 10);
+    value |= ((S & 0b11) << 20);
+    value |= ((R & 0b11) << 22);
+    value |= ((U & 0b11) << 24);
+    value |= ((PAD & 0b111) << 26);
     reg_write(DLA_SHAPE_PARAM1_OFFSET, value);
 }
 
 void set_shape_param2(uint32_t W, uint32_t H, uint32_t PAD) {
     uint32_t value;
     /*! <<<========= Implement here =========>>>*/
+    value = 0;
+    value |= ((H + (PAD * 2)) & 0b11111111);
+    value |= (((W + (PAD * 2)) & 0b11111111) << 8);
     reg_write(DLA_SHAPE_PARAM2_OFFSET, value);
 }
 
