@@ -80,7 +80,7 @@ int qconv2d_relu_maxpool(uint8_t *input_in_DRAM, int8_t *filter_in_DRAM, uint8_t
     uint32_t filter_size = (p * t) * (q * r) * R * S;
     uint32_t real_m = (64 * 1024 - ifmap_size - filter_size) / (4 * (1 + e * ((W + 2 * PAD - S + 1) / U)));
     uint32_t insert_m = (1U << (int)floor(log2(real_m)) < M) ? 1U << (int)floor(log2(real_m)) : M;
-    printf("real_m: %d, m: %d\n", real_m, usable_space / unit_per_m);
+    // printf("real_m: %d, m: %d\n", real_m, usable_space / unit_per_m);
     uint32_t bias_size = insert_m * 4;
     set_mapping_param(insert_m, e, p, q, r, t);
     set_shape_param1(PAD, U, R, S, C, M);
@@ -122,7 +122,7 @@ int qconv2d_relu(uint8_t *input_in_DRAM, int8_t *filter_in_DRAM, uint8_t *opsum_
     uint32_t filter_size = (p * t) * (q * r) * R * S;
     uint32_t real_m = (64 * 1024 - ifmap_size - filter_size) / (4 * (1 + e * ((W + 2 * PAD - S + 1) / U)));
     uint32_t insert_m = (1U << (int)floor(log2(real_m)) < M) ? 1U << (int)floor(log2(real_m)) : M;
-    printf("real_m: %d, m: %d\n", real_m, insert_m);
+    // printf("real_m: %d, m: %d\n", real_m, insert_m);
     uint32_t bias_size = insert_m * 4;
     set_mapping_param(insert_m, e, p, q, r, t);
     set_shape_param1(PAD, U, R, S, C, M);
