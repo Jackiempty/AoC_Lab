@@ -33,7 +33,13 @@ class Dataset_Generator(object):
         #   6. The data should be in float32 format
         # When done, remove the following line
 
-        raise NotImplementedError('You need to imeplement here')
+        for idx, c in enumerate(self.classes):
+            data_dict[c] = []
+            for img, y in self.testloader:
+                if idx == y:
+                    data_dict[c].append(img)
+                if len(data_dict[c]) >= num_data_per_class:
+                    break
         return data_dict
 
     def gen_bin(self, output_path, num_data_per_class=10):
@@ -51,4 +57,22 @@ class Dataset_Generator(object):
         #   6. Write the data (flattened) in float32 format
         # When done, remove the following line
 
-        raise NotImplementedError('You need to imeplement here')
+        with open(output_path, "wb") as f:
+            num_classes = len(self.classes)
+            f.write(struct.pack("I", num_classes))  # Total number of classes
+
+            for class_name in self.classes:
+                encoded_name = class_name.encode('utf-8')
+                name_length = len(encoded_name)
+                f.write(struct.pack("I", name_length))
+                f.write(encoded_name)
+
+            first_data_shape = list(data_dict.values())[0][0].shape
+            flattened_size = np.prod(first_data_shape)
+            f.write(struct.pack("I", num_data_per_class))
+            f.write(struct.pack("I", flattened_size))
+
+            for values in data_dict.values():
+                for value in values:
+                    np_array = value.numpy().astype('float32')
+                    f.write(np_array.tobytes())

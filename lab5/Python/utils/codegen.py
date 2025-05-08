@@ -357,10 +357,15 @@ class CodegenC(CodegenCBase):
             #   conv2d_info["PAD"] = op.attrs["padding"][0]
             # When done, remove the following line (NotImplementedError)
 
-            raise NotImplementedError('You need to imeplement here')
-            for node in op.args:
-                if isinstance(node, Call):
-                    op_list.append(node)
+            if op.op.name == "nn.conv2d":
+                # Extract convolution attributes
+                conv2d_info["PAD"] = op.attrs["padding"][0]  # assume symmetric padding
+                conv2d_info["M"] = op.attrs["channels"]
+                conv2d_info["R"] = op.attrs["kernel_size"][0]
+                conv2d_info["S"] = op.attrs["kernel_size"][1]
+                conv2d_info["m"] = conv2d_info["M"]  # default m = M
+                # No need to search further if conv2d is found
+                break
 
         return conv2d_info
 
@@ -390,8 +395,14 @@ class CodegenC(CodegenCBase):
         #   - Use isinstance(arg, Constant)
         parameters = dict()
 
-        # When done, remove the following line
-        raise NotImplementedError('You need to imeplement here')
+        for arg, name in zip(call.args, tvm_auto_args_NOTES[func_name]):
+            if isinstance(arg, Constant):
+                value = arg
+                is_const = True
+            else:
+                value = self.visit_expr(arg)
+                is_const = False
+            parameters[name] = (value, is_const)
 
         # fetch function generator
         func_gen = tvm_c_func_call_gen.get(func_name,None)
@@ -416,7 +427,11 @@ class CodegenC(CodegenCBase):
         #   - dtype    -> C-style data type
         # When done, remove the following line
 
-        raise NotImplementedError('You need to imeplement here')
+        out = f"{BUF_PREFIX}{self.buf_idx}"
+        self.buf_idx += 1  # 確保下一個 buffer 名稱唯一
+
+        out_size = self.get_size(call)
+        dtype = self.get_dtype_string(call.checked_type)
 
         ### gether the parameter that we need.
         # conv2d Op info
