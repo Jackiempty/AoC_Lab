@@ -44,7 +44,7 @@ test_%:
 	$(QUIET)echo "Running program..."
 	$(QUIET)cd $(TEST_DIR)/$* && make test && cd -
 
-vizuTVM:
+visuTVM:
 	python $(VISUTAM) \
 	-bp $(LOG_DIR)/relay_mc_origin_model.txt \
 	-ap $(LOG_DIR)/relay_mc_MergeComposite_model.txt \
