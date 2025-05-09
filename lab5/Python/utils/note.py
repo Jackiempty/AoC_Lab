@@ -96,13 +96,65 @@ tvm_c_func_call_gen = {
   );
 """,
     f"{COMPILER_NAME}_qconv2d_relu":lambda config:
-f'''### ! <<<========= Implement here =========>>>'''
-  ,f"{COMPILER_NAME}_qlinear_relu":lambda config:
-f'''### ! <<<========= Implement here =========>>>'''
-  ,f"{COMPILER_NAME}_qlinear":lambda config:
-f'''### ! <<<========= Implement here =========>>>'''
-  ,f"{COMPILER_NAME}_quantize":lambda config:
-f'''### ! <<<========= Implement here =========>>>'''
-  ,f"{COMPILER_NAME}_dequantize":lambda config:
-f'''### ! <<<========= Implement here =========>>>'''
+f"""
+#ifndef CPU_ONLY
+  qconv2d_relu(
+#else
+  qconv2d_relu_cpu(
+#endif
+    {config["input"]},{config["weight"]},{config["output"]},
+    {config["bias"]},{config["output_len"]},{config["input_len"]},{config["weight_len"]},
+#ifndef CPU_ONLY
+    // mapping parameter
+    {config["m"]},{config["e"]},{config["p"]},{config["q"]},{config["r"]},{config["t"]},
+#endif
+    // shape parameter
+    {config["PAD"]},{config["U"]},{config["R"]},{config["S"]},
+    {config["C"]},{config["M"]},{config["W"]},{config["H"]},
+    // quantize scale
+    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
+  );
+"""
+  ,
+    f"{COMPILER_NAME}_qlinear_relu":lambda config:
+f"""
+#ifndef CPU_ONLY
+  qlinear_relu(
+#else
+  qlinear_relu_cpu(
+#endif
+    {config["input"]},{config["weight"]},{config["output"]},
+    {config["bias"]},{config["output_len"]},{config["input_len"]},{config["weight_len"]},
+    // quantize scale
+    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
+  );
+"""
+  ,
+    f"{COMPILER_NAME}_qlinear":lambda config:
+f"""
+#ifndef CPU_ONLY
+  qlinear(
+#else
+  qlinear_cpu(
+#endif
+    {config["input"]},{config["weight"]},{config["output"]},
+    {config["bias"]},{config["output_len"]},{config["input_len"]},{config["weight_len"]},
+    // quantize scale
+    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
+  );
+"""
+  ,
+    f"{COMPILER_NAME}_quantize":lambda config:
+f"""
+    {config["input"]},{config["output"]},{config["size"]}, 
+    // quantize scale
+    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
+"""
+  ,
+    f"{COMPILER_NAME}_dequantize":lambda config:
+f"""
+    {config["input"]},{config["output"]},{config["size"]}, 
+    // quantize scale
+    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
+"""
 }

@@ -50,7 +50,7 @@ def fuse_dense_add_relu():
     dequantized_i = dfp.is_op("qnn.dequantize")(i,dfp.wildcard(),dfp.wildcard())
     dequantized_w = dfp.is_op("qnn.dequantize")(w,dfp.wildcard(),dfp.wildcard())
     dequantized_b = dfp.is_op("qnn.dequantize")(b,dfp.wildcard(),dfp.wildcard())
-    dense_op = dfp.is_op("dense")(dequantized_i,dequantized_w,dequantized_b)
+    dense_op = dfp.is_op("nn.dense")(dequantized_i,dequantized_w,dequantized_b)
     relu_op = dfp.is_op("nn.relu")(dense_op)
     quantize_op = dfp.is_op("qnn.quantize")(relu_op,dfp.wildcard(),dfp.wildcard())
     cast_op = dfp.is_op("cast")(quantize_op)  # Assuming requantize is a cast operation
@@ -65,7 +65,7 @@ def fuse_dense_add():
     dequantized_i = dfp.is_op("qnn.dequantize")(i,dfp.wildcard(),dfp.wildcard())
     dequantized_w = dfp.is_op("qnn.dequantize")(w,dfp.wildcard(),dfp.wildcard())
     dequantized_b = dfp.is_op("qnn.dequantize")(b,dfp.wildcard(),dfp.wildcard())
-    dense_op = dfp.is_op("dense")(dequantized_i,dequantized_w,dequantized_b)
+    dense_op = dfp.is_op("nn.dense")(dequantized_i,dequantized_w,dequantized_b)
     add_op = dfp.is_op("nn.relu")(dense_op)
     quantize_op = dfp.is_op("qnn.quantize")(add_op,dfp.wildcard(),dfp.wildcard())
     cast_op = dfp.is_op("cast")(quantize_op)  # Assuming requantize is a cast operation

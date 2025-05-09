@@ -428,7 +428,7 @@ class CodegenC(CodegenCBase):
         # When done, remove the following line
 
         out = f"{BUF_PREFIX}{self.buf_idx}"
-        self.buf_idx += 1  # 確保下一個 buffer 名稱唯一
+        self.buf_idx += 1
 
         out_size = self.get_size(call)
         dtype = self.get_dtype_string(call.checked_type)
