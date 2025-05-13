@@ -357,7 +357,7 @@ class CodegenC(CodegenCBase):
             #   conv2d_info["PAD"] = op.attrs["padding"][0]
             # When done, remove the following line (NotImplementedError)
 
-            if op.op.name == "nn.conv2d":
+            if isinstance(op, Call) and op.op.name == "nn.conv2d":
                 # Extract convolution attributes
                 conv2d_info["PAD"] = op.attrs["padding"][0]  # assume symmetric padding
                 conv2d_info["M"] = op.attrs["channels"]
@@ -366,7 +366,9 @@ class CodegenC(CodegenCBase):
                 conv2d_info["m"] = conv2d_info["M"]  # default m = M
                 # No need to search further if conv2d is found
                 break
-
+            for arg in getattr(op, "args", []):
+                if isinstance(arg, Call):
+                    op_list.append(arg)
         return conv2d_info
 
     ### Traverse all the calls
@@ -397,12 +399,11 @@ class CodegenC(CodegenCBase):
 
         for arg, name in zip(call.args, tvm_auto_args_NOTES[func_name]):
             if isinstance(arg, Constant):
-                value = arg
-                is_const = True
+                parameters[name] = (arg, True)
             else:
-                value = self.visit_expr(arg)
-                is_const = False
-            parameters[name] = (value, is_const)
+                out = self.visit_expr(arg)[0]
+                parameters[name] = (out, False)      
+            
 
         # fetch function generator
         func_gen = tvm_c_func_call_gen.get(func_name,None)
@@ -428,8 +429,7 @@ class CodegenC(CodegenCBase):
         # When done, remove the following line
 
         out = f"{BUF_PREFIX}{self.buf_idx}"
-        self.buf_idx += 1
-
+        self.buf_idx +=1
         out_size = self.get_size(call)
         dtype = self.get_dtype_string(call.checked_type)
 

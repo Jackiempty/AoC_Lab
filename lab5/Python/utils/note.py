@@ -146,15 +146,14 @@ f"""
   ,
     f"{COMPILER_NAME}_quantize":lambda config:
 f"""
-    {config["input"]},{config["output"]},{config["size"]}, 
+    {config["input"]},{config["output"]},{config["output_len"]}, 
     // quantize scale
-    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
+    {convert_log(config["input_scale"])}
 """
   ,
     f"{COMPILER_NAME}_dequantize":lambda config:
 f"""
-    {config["input"]},{config["output"]},{config["size"]}, 
+    {config["input"]},{config["output"]},{config["output_len"]}, 
     // quantize scale
-    {convert_log(config["input_scale"]*config["weight_scale"]/config["dequantize_scale"])}
-"""
+    {convert_log(config["input_scale"])}"""
 }

@@ -27,6 +27,7 @@ def fuse_conv2d_bias_add_relu_max_pool2d():
     # Define the pattern for the operations to be fused
     # Hint: match dequant(i), dequant(w), dequant(b) -> conv2d -> bias_add -> relu -> quant -> cast
     # When done, remove the following line
+
     i = dfp.wildcard()  # Input
     w = dfp.wildcard()  # Weight
     b = dfp.wildcard()  # Bias
@@ -36,9 +37,14 @@ def fuse_conv2d_bias_add_relu_max_pool2d():
     conv2d_op = dfp.is_op("nn.conv2d")(dequantized_i,dequantized_w)
     bias_add_op = dfp.is_op("nn.bias_add")(conv2d_op, dequantized_b)
     relu_op = dfp.is_op("nn.relu")(bias_add_op)
-    quantize_op = dfp.is_op("qnn.quantize")(relu_op,dfp.wildcard(),dfp.wildcard())
-    max_pool2d_op = dfp.is_op("nn.max_pool2d")(quantize_op,dfp.wildcard())
-    cast_op = dfp.is_op("cast")(max_pool2d_op)  # Assuming requantize is a cast operation
+    quantize_op_1 = dfp.is_op("qnn.quantize")(relu_op,dfp.wildcard(),dfp.wildcard())
+    cast_op_1 = dfp.is_op("cast")(quantize_op_1)
+    # pre_maxpool = fuse_conv2d_bias_add_relu()
+
+    dequantize_op_2 = dfp.is_op("qnn.dequantize")(cast_op_1,dfp.wildcard(),dfp.wildcard())
+    max_pool2d_op = dfp.is_op("nn.max_pool2d")(dequantize_op_2)
+    quantize_op_2 = dfp.is_op("qnn.quantize")(max_pool2d_op,dfp.wildcard(),dfp.wildcard())
+    cast_op = dfp.is_op("cast")(quantize_op_2)  # Assuming requantize is a cast operation
     return cast_op
 
 def fuse_dense_add_relu():
@@ -50,8 +56,9 @@ def fuse_dense_add_relu():
     dequantized_i = dfp.is_op("qnn.dequantize")(i,dfp.wildcard(),dfp.wildcard())
     dequantized_w = dfp.is_op("qnn.dequantize")(w,dfp.wildcard(),dfp.wildcard())
     dequantized_b = dfp.is_op("qnn.dequantize")(b,dfp.wildcard(),dfp.wildcard())
-    dense_op = dfp.is_op("nn.dense")(dequantized_i,dequantized_w,dequantized_b)
-    relu_op = dfp.is_op("nn.relu")(dense_op)
+    dense_op = dfp.is_op("nn.dense")(dequantized_i,dequantized_w)
+    add_op = dfp.is_op("nn.relu")(dense_op, dequantized_b)
+    relu_op = dfp.is_op("nn.relu")(add_op)
     quantize_op = dfp.is_op("qnn.quantize")(relu_op,dfp.wildcard(),dfp.wildcard())
     cast_op = dfp.is_op("cast")(quantize_op)  # Assuming requantize is a cast operation
     return cast_op
@@ -65,8 +72,8 @@ def fuse_dense_add():
     dequantized_i = dfp.is_op("qnn.dequantize")(i,dfp.wildcard(),dfp.wildcard())
     dequantized_w = dfp.is_op("qnn.dequantize")(w,dfp.wildcard(),dfp.wildcard())
     dequantized_b = dfp.is_op("qnn.dequantize")(b,dfp.wildcard(),dfp.wildcard())
-    dense_op = dfp.is_op("nn.dense")(dequantized_i,dequantized_w,dequantized_b)
-    add_op = dfp.is_op("nn.relu")(dense_op)
+    dense_op = dfp.is_op("nn.dense")(dequantized_i,dequantized_w)
+    add_op = dfp.is_op("nn.relu")(dense_op, dequantized_b)
     quantize_op = dfp.is_op("qnn.quantize")(add_op,dfp.wildcard(),dfp.wildcard())
     cast_op = dfp.is_op("cast")(quantize_op)  # Assuming requantize is a cast operation
     return cast_op
@@ -75,7 +82,8 @@ def fuse_flatten():
     # Define the pattern for the operations to be fused
     # Hint: match nn.batch_flatten -> quant -> cast
     # When done, remove the following line
-    flatten_op = dfp.is_op("nn.batch_flatten")(dfp.wildcard(),dfp.wildcard(),dfp.wildcard())
+    dequantize_op = dfp.is_op("qnn.dequantize")(dfp.wildcard(),dfp.wildcard(),dfp.wildcard())
+    flatten_op = dfp.is_op("nn.batch_flatten")(dequantize_op)
     quantize_op = dfp.is_op("qnn.quantize")(flatten_op,dfp.wildcard(),dfp.wildcard())
     cast_op = dfp.is_op("cast")(quantize_op)  # Assuming requantize is a cast operation
     return cast_op
