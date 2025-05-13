@@ -36,10 +36,10 @@ if isinstance(arg, Constant):
 
 ### screen shot of Relay Graph using visuTVM (10%)
 - Relay Graph before fuse PASS
-![Link to *.svg file](image/visu_VGG8_relay_ir_pass.svg)
+![Link to *.svg file](image/visu_VGG8_relay_ir.svg)
 
 - Relay Graph after fuse PASS
-![Link to *.svg file](image/visu_VGG8_relay_ir.svg)
+![Link to *.svg file](image/visu_VGG8_relay_ir_pass.svg)
 
 ## HW 5.2 Simulation and Performance Analysis (50%)
 ### Inference model with CPU-only (25%)
