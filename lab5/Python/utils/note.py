@@ -119,7 +119,7 @@ f"""
     f"{COMPILER_NAME}_qlinear_relu":lambda config:
 f"""
 #ifndef CPU_ONLY
-  qlinear_relu(
+  qlinear_relu_cpu(
 #else
   qlinear_relu_cpu(
 #endif
@@ -133,7 +133,7 @@ f"""
     f"{COMPILER_NAME}_qlinear":lambda config:
 f"""
 #ifndef CPU_ONLY
-  qlinear(
+  qlinear_cpu(
 #else
   qlinear_cpu(
 #endif
@@ -146,14 +146,19 @@ f"""
   ,
     f"{COMPILER_NAME}_quantize":lambda config:
 f"""
+  quantize_cpu(
     {config["input"]},{config["output"]},{config["output_len"]}, 
     // quantize scale
     {convert_log(config["input_scale"])}
+  );
 """
   ,
     f"{COMPILER_NAME}_dequantize":lambda config:
 f"""
+  dequantize_cpu(
     {config["input"]},{config["output"]},{config["output_len"]}, 
     // quantize scale
-    {convert_log(config["input_scale"])}"""
+    {convert_log(config["input_scale"])}
+  );
+"""
 }
