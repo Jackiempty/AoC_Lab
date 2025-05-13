@@ -402,7 +402,7 @@ class CodegenC(CodegenCBase):
                 parameters[name] = (arg, True)
             else:
                 out = self.visit_expr(arg)[0]
-                parameters[name] = (out, False)      
+                parameters[name] = (out, False)
             
 
         # fetch function generator
