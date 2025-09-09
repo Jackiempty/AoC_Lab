@@ -61,7 +61,56 @@ def parse_pytorch(model: nn.Module, input_shape=(1, 3, 32, 32)) -> list[ShapePar
 def parse_onnx(model: onnx.ModelProto) -> list[ShapeParam]:
     layers = []
     #! <<<========= Implement here =========>>>
+    inferred_model = shape_inference.infer_shapes(model)
     
+    def get_tensor_shape(tensor_name: str):
+        for value_info in inferred_model.graph.value_info:
+            if value_info.name == tensor_name:
+                return tuple(dim.dim_value for dim in value_info.type.tensor_type.shape.dim)
+        
+        for input_info in inferred_model.graph.input:
+            if input_info.name == tensor_name:
+                return tuple(dim.dim_value for dim in input_info.type.tensor_type.shape.dim)
+        
+        for output_info in inferred_model.graph.output:
+            if output_info.name == tensor_name:
+                return tuple(dim.dim_value for dim in output_info.type.tensor_type.shape.dim)
+        
+        return None
+    
+    for node in inferred_model.graph.node:
+        op_type = node.op_type
+
+        input_shape = get_tensor_shape(node.input[0]) if node.input else None
+        output_shape = get_tensor_shape(node.output[0]) if node.output else None
+        
+        if op_type == "Conv":
+            attrs = {a.name: a for a in node.attribute}
+            R, S = attrs["kernel_shape"].ints
+            U = attrs["strides"].ints[0] if "strides" in attrs else 1
+            P = attrs["pads"].ints[0] if "pads" in attrs else 0
+
+            N, C, H, W = input_shape
+            N2, M, E, F = output_shape
+
+            layers.append(
+                Conv2DShapeParam(N=N, H=H, W=W, R=R, S=S, E=E, F=F,
+                                C=C, M=M, U=U, P=P)
+            )
+
+        elif op_type == "MaxPool":
+            attrs = {a.name: a for a in node.attribute}
+            kH, kW = attrs["kernel_shape"].ints
+            stride = attrs["strides"].ints[0]
+
+            N, C, H, W = input_shape
+            layers.append(MaxPool2DShapeParam(N=N, kernel_size=kH, stride=stride))
+
+        elif op_type in ["Gemm", "MatMul"]:
+            N, in_features = input_shape
+            N2, out_features = output_shape
+            layers.append(LinearShapeParam(N=N, in_features=in_features, out_features=out_features))
+
     return layers
 
 
