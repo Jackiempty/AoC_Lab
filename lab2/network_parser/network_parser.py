@@ -16,21 +16,44 @@ from layer_info import (
     MaxPool2DShapeParam,
 )
 
-from lib.models import VGG_custom
+from lib.models.vgg import VGG
 import torch2onnx
 
 
 def parse_pytorch(model: nn.Module, input_shape=(1, 3, 32, 32)) -> list[ShapeParam]:
     layers = []
     #! <<<========= Implement here =========>>>
+    def hook_fn(module, inputs, output):
+        if isinstance(module, nn.Conv2d):
+            N, C, H, W = inputs[0].shape
+            M, _, R, S = module.weight.shape
+            E, F = output.shape[2], output.shape[3]
+            stride = module.stride[0] if isinstance(module.stride, tuple) else module.stride
+            padding = module.padding[0] if isinstance(module.padding, tuple) else module.padding
+            layers.append(
+                Conv2DShapeParam(N, H, W, R, S, E, F, C, M, stride, padding)
+            )
+        elif isinstance(module, nn.MaxPool2d):
+            N, C, H, W = inputs[0].shape
+            kernel_size = module.kernel_size if isinstance(module.kernel_size, int) else module.kernel_size[0]
+            stride = module.stride if isinstance(module.stride, int) else module.stride[0]
+            layers.append(MaxPool2DShapeParam(N, kernel_size, stride))
+        elif isinstance(module, nn.Linear):
+            N, in_features = inputs[0].shape
+            layers.append(LinearShapeParam(N, module.in_features, module.out_features))
 
-    def hook_fn():
-        layers.append(ShapeParam())
-    
+    # register hook
     hooks = []
-    for module in model.modules():
-        if not isinstance(module, nn.Sequential) and not isinstance(module, nn.ModuleList):
-            hooks.append(module.register_forward_hook(hook_fn))
+    for m in model.modules():
+        hooks.append(m.register_forward_hook(hook_fn))
+
+    # forward pass
+    dummy_input = torch.randn(*input_shape)
+    model(dummy_input)
+
+    # remove hooks
+    for h in hooks:
+        h.remove()
     
     return layers
 
@@ -38,30 +61,6 @@ def parse_pytorch(model: nn.Module, input_shape=(1, 3, 32, 32)) -> list[ShapePar
 def parse_onnx(model: onnx.ModelProto) -> list[ShapeParam]:
     layers = []
     #! <<<========= Implement here =========>>>
-
-    inferred_model = shape_inference.infer_shapes(model)
-    
-    def get_tensor_shape(tensor_name: str):
-        for value_info in inferred_model.graph.value_info:
-            if value_info.name == tensor_name:
-                return tuple(dim.dim_value for dim in value_info.type.tensor_type.shape.dim)
-        
-        for input_info in inferred_model.graph.input:
-            if input_info.name == tensor_name:
-                return tuple(dim.dim_value for dim in input_info.type.tensor_type.shape.dim)
-        
-        for output_info in inferred_model.graph.output:
-            if output_info.name == tensor_name:
-                return tuple(dim.dim_value for dim in output_info.type.tensor_type.shape.dim)
-        
-        return None
-    
-    for node in inferred_model.graph.node:
-        input_shape = get_tensor_shape(node.input[0]) if node.input else None
-        output_shape = get_tensor_shape(node.output[0]) if node.output else None
-        
-        if input_shape and output_shape:
-            layers.append(ShapeParam(node.op_type, input_shape, output_shape))
     
     return layers
 
@@ -112,7 +111,7 @@ def run_tests() -> None:
     ]
 
     # Test with the PyTorch model.
-    model = VGG_custom()
+    model = VGG()
     layers_pth = parse_pytorch(model)
 
     # Define the input shape.

@@ -73,3 +73,5 @@ __pycache__
 lab5/data
 lab5/output
 main
+.venv
+parser_onnx.onnx
