@@ -1,4 +1,0 @@
-# Eyeriss Mapping Report
-
-## Results
-
